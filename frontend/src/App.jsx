@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
-const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const apiBase =
+  import.meta.env.VITE_API_BASE || 'https://synthetic-sampler.onrender.com';
 
 const initialState = {
   persona:
