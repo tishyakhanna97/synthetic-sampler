@@ -4,12 +4,14 @@ import re
 from typing import Any
 
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
+from google import genai
 
 
 load_dotenv()
 
-MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+
+client = genai.Client()
 
 
 def _extract_json(text: str) -> dict[str, Any]:
@@ -35,7 +37,8 @@ def build_prompt(persona: str, situation: str, information: str, question: str) 
 
 async def call_llm(persona: str, situation: str, information: str, question: str) -> dict[str, Any]:
     prompt = build_prompt(persona, situation, information, question)
-    llm = ChatOpenAI(model=MODEL_NAME, temperature=0.2)
-    response = await llm.ainvoke(prompt)
-    payload = _extract_json(response.content)
+    response = await client.aio.models.generate_content(
+        model=MODEL_NAME, contents=prompt
+    )
+    payload = _extract_json(response.text)
     return payload
