@@ -56,9 +56,9 @@ export default function App() {
     setAuthError('');
   }, []);
 
-  // Initialize Google Sign-In button
+  // Initialize Google Sign-In button (only when not authenticated)
   useEffect(() => {
-    if (authDisabled || !googleClientId) return;
+    if (authDisabled || !googleClientId || credential) return;
 
     let cancelled = false;
     const initGoogle = () => {
