@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const apiBase =
   import.meta.env.VITE_API_BASE || 'https://synthetic-sampler.onrender.com';
+
+const authDisabled = import.meta.env.VITE_AUTH_DISABLED === 'true';
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 const initialState = {
   persona:
@@ -19,6 +22,67 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Auth state
+  const [credential, setCredential] = useState(null);
+  const [userEmail, setUserEmail] = useState('');
+  const [authError, setAuthError] = useState('');
+  const googleButtonRef = useRef(null);
+
+  const isAuthenticated = authDisabled || !!credential;
+
+  const handleGoogleResponse = useCallback(async (response) => {
+    setAuthError('');
+    try {
+      const res = await fetch(`${apiBase}/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (data.allowed) {
+        setCredential(response.credential);
+        setUserEmail(data.email);
+      } else {
+        setAuthError('Your email is not on the allowlist.');
+      }
+    } catch {
+      setAuthError('Failed to verify credentials. Please try again.');
+    }
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    setCredential(null);
+    setUserEmail('');
+    setAuthError('');
+  }, []);
+
+  // Initialize Google Sign-In button
+  useEffect(() => {
+    if (authDisabled || !googleClientId) return;
+
+    let cancelled = false;
+    const initGoogle = () => {
+      if (cancelled) return;
+      if (!window.google?.accounts?.id) {
+        setTimeout(initGoogle, 200);
+        return;
+      }
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleResponse,
+      });
+      if (googleButtonRef.current) {
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+        });
+      }
+    };
+    initGoogle();
+    return () => { cancelled = true; };
+  }, [handleGoogleResponse, credential]);
+
   const canSubmit = useMemo(() => {
     return form.persona && form.situation && form.information && form.question;
   }, [form]);
@@ -32,9 +96,13 @@ export default function App() {
     setResult(null);
     setLoading(true);
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (credential) {
+        headers['Authorization'] = `Bearer ${credential}`;
+      }
       const response = await fetch(`${apiBase}/runs`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           persona: form.persona,
           situation: form.situation,
@@ -42,6 +110,11 @@ export default function App() {
           question: form.question,
         }),
       });
+      if (response.status === 401 || response.status === 403) {
+        setCredential(null);
+        setUserEmail('');
+        throw new Error('Session expired. Please sign in again.');
+      }
       if (!response.ok) {
         throw new Error(`Run failed (${response.status})`);
       }
@@ -54,11 +127,49 @@ export default function App() {
     }
   };
 
+  // --- Login screen ---
+  if (!isAuthenticated) {
+    return (
+      <div className="page">
+        <header className="hero">
+          <h1>Synthetic Sampler</h1>
+          <p className="subtitle">Sign in to continue.</p>
+        </header>
+        <section className="panel" style={{ textAlign: 'center', padding: '2rem' }}>
+          <div ref={googleButtonRef} style={{ display: 'inline-block' }} />
+          {authError && <div className="error" style={{ marginTop: '1rem' }}>{authError}</div>}
+        </section>
+      </div>
+    );
+  }
+
+  // --- Main app ---
   return (
     <div className="page">
       <header className="hero">
         <h1>Synthetic Sampler</h1>
-          <p className="subtitle">Run once to see the output.</p>
+        <p className="subtitle">
+          Run once to see the output.
+          {userEmail && (
+            <span style={{ marginLeft: '1rem', fontSize: '0.85em', opacity: 0.8 }}>
+              Signed in as {userEmail}{' '}
+              <button
+                onClick={handleLogout}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'inherit',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  fontSize: 'inherit',
+                  padding: 0,
+                }}
+              >
+                Sign out
+              </button>
+            </span>
+          )}
+        </p>
       </header>
 
       <section className="panel">
