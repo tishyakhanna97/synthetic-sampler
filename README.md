@@ -1,7 +1,10 @@
 # Synthetic Sampler
 
-React + FastAPI app to run a single LLM response on demand.
+Synthetic sampler to mock human respondents for market surveys.
+Uses Worldview, Social Context, Psychological factors to the endow the LLM "human" concerns.
+Based on the paper; https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4880894
 
+https://synthetic-sampler-frontend.onrender.com/
 ## Backend
 
 ```bash
