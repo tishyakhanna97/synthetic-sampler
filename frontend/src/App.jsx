@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import BatchResults from './BatchResults.jsx';
 import RunHistory from './RunHistory.jsx';
 
 const apiBase =
@@ -19,10 +20,12 @@ const initialState = {
 
 export default function App() {
   const [form, setForm] = useState(initialState);
+  const [iterations, setIterations] = useState(1);
   const [result, setResult] = useState(null);
+  const [batchData, setBatchData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState('run'); // 'run' | 'history'
+  const [tab, setTab] = useState('run'); // 'run' | 'history' | 'results'
 
   // Auth state
   const [credential, setCredential] = useState(null);
@@ -93,7 +96,7 @@ export default function App() {
     setForm((prev) => ({ ...prev, [key]: event.target.value }));
   };
 
-  const runOnce = async () => {
+  const handleRun = async () => {
     setError('');
     setResult(null);
     setLoading(true);
@@ -102,15 +105,21 @@ export default function App() {
       if (credential) {
         headers['Authorization'] = `Bearer ${credential}`;
       }
-      const response = await fetch(`${apiBase}/runs`, {
+
+      const isBatch = iterations > 1;
+      const url = isBatch ? `${apiBase}/runs/batch` : `${apiBase}/runs`;
+      const body = {
+        persona: form.persona,
+        situation: form.situation,
+        information: form.information,
+        question: form.question,
+      };
+      if (isBatch) body.iterations = iterations;
+
+      const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          persona: form.persona,
-          situation: form.situation,
-          information: form.information,
-          question: form.question,
-        }),
+        body: JSON.stringify(body),
       });
       if (response.status === 401 || response.status === 403) {
         setCredential(null);
@@ -121,7 +130,12 @@ export default function App() {
         throw new Error(`Run failed (${response.status})`);
       }
       const data = await response.json();
-      setResult(data);
+      if (isBatch) {
+        setBatchData(data);
+        setTab('results');
+      } else {
+        setResult(data);
+      }
     } catch (err) {
       setError(err.message || 'Run failed');
     } finally {
@@ -179,6 +193,12 @@ export default function App() {
           onClick={() => setTab('run')}
         >
           New Run
+        </button>
+        <button
+          className={tab === 'results' ? 'tab active' : 'tab'}
+          onClick={() => setTab('results')}
+        >
+          Results
         </button>
         <button
           className={tab === 'history' ? 'tab active' : 'tab'}
@@ -239,13 +259,24 @@ export default function App() {
             </div>
 
             <div className="controls">
+              <label style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', color: 'var(--ink)' }}>
+                Iterations
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={iterations}
+                  onChange={(e) => setIterations(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+                  style={{ width: '70px' }}
+                />
+              </label>
               <div className="buttons">
                 <button
                   className="primary"
                   disabled={!canSubmit || loading}
-                  onClick={runOnce}
+                  onClick={handleRun}
                 >
-                  Run Once
+                  {loading ? 'Running…' : iterations > 1 ? `Run ${iterations}x` : 'Run Once'}
                 </button>
               </div>
             </div>
@@ -268,6 +299,8 @@ export default function App() {
           </section>
         </>
       )}
+
+      {tab === 'results' && <BatchResults batchData={batchData} />}
 
       {tab === 'history' && <RunHistory credential={credential} />}
     </div>

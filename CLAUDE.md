@@ -27,14 +27,15 @@ backend/
 
 frontend/
   src/
-    App.jsx        — Main component: auth flow + form + results
+    App.jsx        — Main component: auth flow, tab navigation (New Run / History), form + results
+    RunHistory.jsx — History tab: fetches last 10 runs, renders as table with all fields
     main.jsx       — React entry point
-    styles.css     — Styles
+    styles.css     — Styles (includes tab nav and runs table)
   index.html       — Includes Google Identity Services script
   Dockerfile       — Node 20, vite dev server
   .env
 
-docker-compose.yml — Local dev: backend (port 8000) + frontend (port 5173)
+docker-compose.yml — Local dev: postgres (port 5432) + backend (port 8000) + frontend (port 5173)
 ```
 
 ## Key Patterns
@@ -58,7 +59,13 @@ docker-compose.yml — Local dev: backend (port 8000) + frontend (port 5173)
 - `create_tables()` runs on startup (uses IF NOT EXISTS, safe to call repeatedly)
 - Graceful degradation: if `DATABASE_URL` is not set, DB features are disabled
 - Local dev: Postgres 16 container via Docker Compose (port 5432, db `synthetic_sampler`)
-- Production: Supabase (free hosted PostgreSQL) — set `DATABASE_URL` in Render env vars
+- Production: Supabase (free hosted PostgreSQL) — set `DATABASE_URL` in Render env vars (use Session Pooler URI for Render IPv4 compatibility)
+- Single shared database for all users; `GET /runs` returns runs from all users (no per-user filtering)
+
+### Frontend
+- Tab navigation: "New Run" (form + results) and "History" (last 10 runs table)
+- History table shows: created time, user email, persona, situation, information, question, answer, reason, batch ID, run ID
+- Google Sign-In button only initializes when not authenticated (prevents re-render after login)
 
 ## Environment Variables
 

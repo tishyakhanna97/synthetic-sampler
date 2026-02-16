@@ -83,6 +83,9 @@ input[type='number'] {
   font-size: 0.95rem;
   font-family: inherit;
   resize: vertical;
+  overflow-y: auto;
+  min-height: 60px;
+  max-height: 200px;
 }
 
 textarea:focus,
@@ -275,6 +278,56 @@ button:not(:disabled):hover {
 .runs-table .answer-cell {
   font-weight: 600;
   color: var(--accent);
+}
+
+/* Summary stats */
+.summary-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Charts */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.chart-container h3 {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+code {
+  background: var(--card-strong);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 720px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {

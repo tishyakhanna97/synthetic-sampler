@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RunCreate(BaseModel):
@@ -10,6 +10,14 @@ class RunCreate(BaseModel):
     situation: str
     information: str
     question: str
+
+
+class BatchRunCreate(BaseModel):
+    persona: str
+    situation: str
+    information: str
+    question: str
+    iterations: int = Field(ge=1, le=10, default=1)
 
 
 class LLMResult(BaseModel):
@@ -30,3 +38,9 @@ class RunResponse(BaseModel):
     reason: str
     raw_output: dict
     created_at: datetime
+
+
+class BatchRunResponse(BaseModel):
+    batch_id: UUID
+    runs: list[RunResponse]
+    summary: dict

@@ -1,5 +1,7 @@
+import asyncio
 import os
 import uuid as uuid_mod
+from collections import Counter
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -10,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .auth import AUTH_DISABLED, ALLOWED_EMAILS, require_auth, verify_google_token
 from .database import Run, create_tables, get_session
 from .llm import call_llm
-from .schemas import LLMResult, RunCreate, RunResponse
+from .schemas import BatchRunCreate, BatchRunResponse, LLMResult, RunCreate, RunResponse
 
 app = FastAPI(title="Synthetic Sampler")
 
@@ -95,6 +97,63 @@ async def create_run(
     await session.refresh(run)
 
     return RunResponse.model_validate(run)
+
+
+@app.post("/runs/batch", response_model=BatchRunResponse)
+async def create_batch_run(
+    request: BatchRunCreate,
+    user=Depends(require_auth),
+    session: AsyncSession = Depends(get_session),
+) -> BatchRunResponse:
+    batch_id = uuid_mod.uuid4()
+    user_email = user.get("email", "unknown")
+    run_input = RunCreate(
+        persona=request.persona,
+        situation=request.situation,
+        information=request.information,
+        question=request.question,
+    )
+
+    tasks = [_run_one(run_input) for _ in range(request.iterations)]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    run_rows = []
+    for res in results:
+        if isinstance(res, Exception):
+            answer = "ERROR"
+            reason = str(res)
+            raw_output = {"error": str(res)}
+        else:
+            answer = res.answer
+            reason = res.reason
+            raw_output = res.raw_output
+
+        run = Run(
+            user_email=user_email,
+            batch_id=batch_id,
+            inputs=run_input.model_dump(),
+            parameters={},
+            answer=answer,
+            reason=reason,
+            raw_output=raw_output,
+        )
+        session.add(run)
+        run_rows.append(run)
+
+    await session.commit()
+    for run in run_rows:
+        await session.refresh(run)
+
+    run_responses = [RunResponse.model_validate(r) for r in run_rows]
+    answer_counts = dict(Counter(r.answer for r in run_responses))
+    error_count = sum(1 for r in run_responses if r.answer == "ERROR")
+    summary = {
+        "total": len(run_responses),
+        "answer_counts": answer_counts,
+        "error_count": error_count,
+    }
+
+    return BatchRunResponse(batch_id=batch_id, runs=run_responses, summary=summary)
 
 
 @app.get("/runs", response_model=list[RunResponse])
