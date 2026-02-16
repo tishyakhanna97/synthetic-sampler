@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .auth import AUTH_DISABLED, ALLOWED_EMAILS, require_auth, verify_google_token
+from .auth import AUTH_DISABLED, require_auth, verify_google_token
 from .database import Run, create_tables, get_session
 from .llm import call_llm
 from .schemas import BatchRunCreate, BatchRunResponse, LLMResult, RunCreate, RunResponse
@@ -56,8 +56,7 @@ async def auth_verify(body: dict) -> dict:
         return {"email": "", "allowed": False}
 
     email = payload.get("email", "")
-    allowed = not ALLOWED_EMAILS or email in ALLOWED_EMAILS
-    return {"email": email, "allowed": allowed}
+    return {"email": email, "allowed": True}
 
 
 async def _run_one(request: RunCreate) -> LLMResult:

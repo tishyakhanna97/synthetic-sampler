@@ -48,7 +48,7 @@ export default function App() {
         setCredential(response.credential);
         setUserEmail(data.email);
       } else {
-        setAuthError('Your email is not on the allowlist.');
+        setAuthError('Sign-in failed. Please try again.');
       }
     } catch {
       setAuthError('Failed to verify credentials. Please try again.');

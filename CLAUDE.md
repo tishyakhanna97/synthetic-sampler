@@ -7,7 +7,7 @@ A web app that prompts an LLM with a configurable persona, social context, psych
 - **Frontend**: React (Vite) — `frontend/`
 - **Backend**: FastAPI (Python 3.11) — `backend/`
 - **LLM**: Google Gemini via `google-genai` SDK (`gemini-3-flash-preview`)
-- **Auth**: Google OAuth (Identity Services popup flow) with email allowlist
+- **Auth**: Google OAuth (Identity Services popup flow)
 - **Database**: PostgreSQL (Supabase in prod, local container for dev) via async SQLAlchemy + asyncpg
 - **Deployment**: Render (backend as Docker web service, frontend as static site)
 - **Local dev**: Docker Compose (`docker-compose.yml`)
@@ -42,7 +42,7 @@ docker-compose.yml — Local dev: postgres (port 5432) + backend (port 8000) + f
 
 ### Authentication
 - `AUTH_DISABLED=true` (backend) + `VITE_AUTH_DISABLED=true` (frontend) bypasses all auth for local dev
-- Production: Google OAuth popup flow, backend verifies ID token, checks email against `ALLOWED_EMAILS`
+- Production: Google OAuth popup flow, backend verifies ID token, any valid Google account is allowed
 - `POST /auth/verify` — frontend sends Google credential, backend returns `{email, allowed}`
 - `POST /runs` is protected by `Depends(require_auth)` — requires `Authorization: Bearer <token>`
 - On 401/403, frontend clears credential and shows login screen
@@ -74,7 +74,6 @@ docker-compose.yml — Local dev: postgres (port 5432) + backend (port 8000) + f
 |---|---|---|
 | `GEMINI_API_KEY` | Yes | Google Gemini API key |
 | `GOOGLE_CLIENT_ID` | Prod | OAuth client ID |
-| `ALLOWED_EMAILS` | Prod | Comma-separated allowlist |
 | `FRONTEND_URL` | Prod | Frontend URL for CORS |
 | `AUTH_DISABLED` | Dev only | Set `true` to skip auth |
 | `GEMINI_MODEL` | No | Defaults to `gemini-3-flash-preview` |
