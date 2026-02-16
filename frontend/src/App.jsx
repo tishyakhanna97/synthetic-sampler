@@ -300,7 +300,7 @@ export default function App() {
         </>
       )}
 
-      {tab === 'results' && <BatchResults batchData={batchData} />}
+      {tab === 'results' && <BatchResults batchData={batchData} credential={credential} />}
 
       {tab === 'history' && <RunHistory credential={credential} />}
     </div>

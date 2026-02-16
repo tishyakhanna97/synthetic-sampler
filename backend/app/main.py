@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .auth import AUTH_DISABLED, require_auth, verify_google_token
@@ -155,6 +155,37 @@ async def create_batch_run(
     return BatchRunResponse(batch_id=batch_id, runs=run_responses, summary=summary)
 
 
+@app.get("/runs/batches")
+async def list_batches(
+    user=Depends(require_auth),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict]:
+    email = user.get("email", "unknown")
+    stmt = (
+        select(
+            Run.batch_id,
+            func.count().label("run_count"),
+            func.min(Run.created_at).label("created_at"),
+            func.min(Run.inputs["question"].as_string()).label("question"),
+        )
+        .where(Run.user_email == email, Run.batch_id.is_not(None))
+        .group_by(Run.batch_id)
+        .order_by(func.min(Run.created_at).desc())
+        .limit(50)
+    )
+    result = await session.execute(stmt)
+    rows = result.all()
+    return [
+        {
+            "batch_id": str(r.batch_id),
+            "run_count": r.run_count,
+            "created_at": r.created_at.isoformat(),
+            "question": r.question or "",
+        }
+        for r in rows
+    ]
+
+
 @app.get("/runs", response_model=list[RunResponse])
 async def list_runs(
     batch_id: Optional[str] = Query(None),
@@ -163,7 +194,8 @@ async def list_runs(
     user=Depends(require_auth),
     session: AsyncSession = Depends(get_session),
 ) -> list[RunResponse]:
-    stmt = select(Run)
+    email = user.get("email", "unknown")
+    stmt = select(Run).where(Run.user_email == email)
 
     if batch_id:
         stmt = stmt.where(Run.batch_id == uuid_mod.UUID(batch_id))

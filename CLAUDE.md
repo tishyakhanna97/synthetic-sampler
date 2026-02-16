@@ -60,7 +60,7 @@ docker-compose.yml — Local dev: postgres (port 5432) + backend (port 8000) + f
 - Graceful degradation: if `DATABASE_URL` is not set, DB features are disabled
 - Local dev: Postgres 16 container via Docker Compose (port 5432, db `synthetic_sampler`)
 - Production: Supabase (free hosted PostgreSQL) — set `DATABASE_URL` in Render env vars (use Session Pooler URI for Render IPv4 compatibility)
-- Single shared database for all users; `GET /runs` returns runs from all users (no per-user filtering)
+- Single shared database for all users; `GET /runs` filters by the authenticated user's email
 
 ### Frontend
 - Tab navigation: "New Run" (form + results) and "History" (last 10 runs table)
