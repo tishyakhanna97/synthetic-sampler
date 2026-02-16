@@ -105,8 +105,7 @@ async def list_runs(
     user=Depends(require_auth),
     session: AsyncSession = Depends(get_session),
 ) -> list[RunResponse]:
-    email = user.get("email", "unknown")
-    stmt = select(Run).where(Run.user_email == email)
+    stmt = select(Run)
 
     if batch_id:
         stmt = stmt.where(Run.batch_id == uuid_mod.UUID(batch_id))

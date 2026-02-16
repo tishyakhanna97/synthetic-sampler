@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import RunHistory from './RunHistory.jsx';
 
 const apiBase =
   import.meta.env.VITE_API_BASE || 'https://synthetic-sampler.onrender.com';
@@ -21,6 +22,7 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [tab, setTab] = useState('run'); // 'run' | 'history'
 
   // Auth state
   const [credential, setCredential] = useState(null);
@@ -149,9 +151,8 @@ export default function App() {
       <header className="hero">
         <h1>Synthetic Sampler</h1>
         <p className="subtitle">
-          Run once to see the output.
           {userEmail && (
-            <span style={{ marginLeft: '1rem', fontSize: '0.85em', opacity: 0.8 }}>
+            <span style={{ fontSize: '0.85em', opacity: 0.8 }}>
               Signed in as {userEmail}{' '}
               <button
                 onClick={handleLogout}
@@ -172,82 +173,103 @@ export default function App() {
         </p>
       </header>
 
-      <section className="panel">
-        <div className="field-grid">
-          <label>
-            Worldview (values / social preferences)
-            <textarea
-              rows="3"
-              value={form.persona}
-              onChange={updateField('persona')}
-              placeholder="e.g. A cautious compliance officer"
-            />
-            <span className="helper">Worldview: Values that are key to the LLM</span>
-          </label>
-          <label>
-            Social context (role / identity)
-            <textarea
-              rows="3"
-              value={form.situation}
-              onChange={updateField('situation')}
-              placeholder="e.g. Reviewing a high-risk vendor contract"
-            />
-            <span className="helper">
-              Social context: Social context relates to the identity the LLM should assume
-            </span>
-          </label>
-          <label>
-            Psychological factors (situational state)
-            <textarea
-              rows="3"
-              value={form.information}
-              onChange={updateField('information')}
-              placeholder="e.g. Vendor lacks SOC2, data is PII"
-            />
-            <span className="helper">
-              Psychological context: Psychological context relates to the situation the LLM is
-              supposed to be in
-            </span>
-          </label>
-          <label>
-            Question
-            <textarea
-              rows="2"
-              value={form.question}
-              onChange={updateField('question')}
-              placeholder="e.g. Approve the contract?"
-            />
-          </label>
-        </div>
+      <nav className="tabs">
+        <button
+          className={tab === 'run' ? 'tab active' : 'tab'}
+          onClick={() => setTab('run')}
+        >
+          New Run
+        </button>
+        <button
+          className={tab === 'history' ? 'tab active' : 'tab'}
+          onClick={() => setTab('history')}
+        >
+          History
+        </button>
+      </nav>
 
-        <div className="controls">
-          <div className="buttons">
-            <button
-              className="primary"
-              disabled={!canSubmit || loading}
-              onClick={runOnce}
-            >
-              Run Once
-            </button>
-          </div>
-        </div>
-
-        {error && <div className="error">{error}</div>}
-      </section>
-
-      <section className="results">
-        <div className="card">
-          <h2>Result</h2>
-          {result ? (
-            <div className="result-block">
-              <p className="answer">{result.answer || 'No answer'}</p>
-              <p className="reason">{result.reason}</p>
+      {tab === 'run' && (
+        <>
+          <section className="panel">
+            <div className="field-grid">
+              <label>
+                Worldview (values / social preferences)
+                <textarea
+                  rows="3"
+                  value={form.persona}
+                  onChange={updateField('persona')}
+                  placeholder="e.g. A cautious compliance officer"
+                />
+                <span className="helper">Worldview: Values that are key to the LLM</span>
+              </label>
+              <label>
+                Social context (role / identity)
+                <textarea
+                  rows="3"
+                  value={form.situation}
+                  onChange={updateField('situation')}
+                  placeholder="e.g. Reviewing a high-risk vendor contract"
+                />
+                <span className="helper">
+                  Social context: Social context relates to the identity the LLM should assume
+                </span>
+              </label>
+              <label>
+                Psychological factors (situational state)
+                <textarea
+                  rows="3"
+                  value={form.information}
+                  onChange={updateField('information')}
+                  placeholder="e.g. Vendor lacks SOC2, data is PII"
+                />
+                <span className="helper">
+                  Psychological context: Psychological context relates to the situation the LLM is
+                  supposed to be in
+                </span>
+              </label>
+              <label>
+                Question
+                <textarea
+                  rows="2"
+                  value={form.question}
+                  onChange={updateField('question')}
+                  placeholder="e.g. Approve the contract?"
+                />
+              </label>
             </div>
-          ) : (
-            <p className="muted">Run once to see the output.</p>
-          )}
-        </div>
-      </section>
+
+            <div className="controls">
+              <div className="buttons">
+                <button
+                  className="primary"
+                  disabled={!canSubmit || loading}
+                  onClick={runOnce}
+                >
+                  Run Once
+                </button>
+              </div>
+            </div>
+
+            {error && <div className="error">{error}</div>}
+          </section>
+
+          <section className="results">
+            <div className="card">
+              <h2>Result</h2>
+              {result ? (
+                <div className="result-block">
+                  <p className="answer">{result.answer || 'No answer'}</p>
+                  <p className="reason">{result.reason}</p>
+                </div>
+              ) : (
+                <p className="muted">Run once to see the output.</p>
+              )}
+            </div>
+          </section>
+        </>
+      )}
+
+      {tab === 'history' && <RunHistory credential={credential} />}
     </div>
   );
 }
