@@ -31,7 +31,15 @@ export default function App() {
   const [credential, setCredential] = useState(null);
   const [userEmail, setUserEmail] = useState('');
   const [authError, setAuthError] = useState('');
+  const [backendReady, setBackendReady] = useState(false);
   const googleButtonRef = useRef(null);
+
+  // Ping the backend on load to wake it up (Render cold start)
+  useEffect(() => {
+    fetch(`${apiBase}/health`)
+      .then(() => setBackendReady(true))
+      .catch(() => setBackendReady(false));
+  }, []);
 
   const isAuthenticated = authDisabled || !!credential;
 
@@ -51,7 +59,7 @@ export default function App() {
         setAuthError('Sign-in failed. Please try again.');
       }
     } catch {
-      setAuthError('Failed to verify credentials. Please try again.');
+      setAuthError('Could not reach the server — it may be waking up. Please try signing in again in a moment.');
     }
   }, []);
 
@@ -152,6 +160,9 @@ export default function App() {
           <p className="subtitle">Sign in to continue.</p>
         </header>
         <section className="panel" style={{ textAlign: 'center', padding: '2rem' }}>
+          {!backendReady && (
+          <p className="muted" style={{ marginBottom: '1rem' }}>Server is warming up, please wait a moment…</p>
+        )}
           <div ref={googleButtonRef} style={{ display: 'inline-block' }} />
           {authError && <div className="error" style={{ marginTop: '1rem' }}>{authError}</div>}
         </section>
